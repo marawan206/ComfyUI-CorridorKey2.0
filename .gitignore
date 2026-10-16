@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Model files are downloaded into ComfyUI/models/corridorkey2, never committed.
+*.safetensors
+*.pt
+*.pth
+*.npz
+*.bin
+
+output/
+temp/
