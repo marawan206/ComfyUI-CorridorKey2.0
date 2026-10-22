@@ -1,0 +1,474 @@
+{
+  "id": "c8874522-d7ac-428f-a22f-a729a4e1eae6",
+  "revision": 0,
+  "last_node_id": 6,
+  "last_link_id": 4,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "CorridorKey2DemoClip",
+      "pos": [
+        40,
+        120
+      ],
+      "size": [
+        277.237890625,
+        242
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "frames",
+          "name": "frames",
+          "type": "INT",
+          "widget": {
+            "name": "frames"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "screen",
+          "name": "screen",
+          "type": "COMBO",
+          "widget": {
+            "name": "screen"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "spill",
+          "name": "spill",
+          "type": "FLOAT",
+          "widget": {
+            "name": "spill"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "noise",
+          "name": "noise",
+          "type": "FLOAT",
+          "widget": {
+            "name": "noise"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "seed",
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            2
+          ]
+        },
+        {
+          "localized_name": "true_alpha",
+          "name": "true_alpha",
+          "type": "MASK",
+          "links": null
+        },
+        {
+          "localized_name": "true_foreground",
+          "name": "true_foreground",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CorridorKey2DemoClip"
+      },
+      "widgets_values": [
+        48,
+        1280,
+        720,
+        "green",
+        0.35,
+        0.01,
+        0
+      ],
+      "widgets_values_named": {
+        "frames": 48,
+        "width": 1280,
+        "height": 720,
+        "screen": "green",
+        "spill": 0.35,
+        "noise": 0.01,
+        "seed": 0
+      }
+    },
+    {
+      "id": 2,
+      "type": "CorridorKey2ModelLoader",
+      "pos": [
+        40,
+        442
+      ],
+      "size": [
+        286.780859375,
+        130
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "weights",
+          "name": "weights",
+          "type": "COMBO",
+          "widget": {
+            "name": "weights"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "auto_download",
+          "name": "auto_download",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "auto_download"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "keep_on_gpu",
+          "name": "keep_on_gpu",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "keep_on_gpu"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "vram_reserve_gb",
+          "name": "vram_reserve_gb",
+          "type": "FLOAT",
+          "widget": {
+            "name": "vram_reserve_gb"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "CORRIDORKEY2_MODEL",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CorridorKey2ModelLoader"
+      },
+      "widgets_values": [
+        "corridorkey_v2.safetensors",
+        true,
+        false,
+        0.5
+      ],
+      "widgets_values_named": {
+        "weights": "corridorkey_v2.safetensors",
+        "auto_download": true,
+        "keep_on_gpu": false,
+        "vram_reserve_gb": 0.5
+      }
+    },
+    {
+      "id": 3,
+      "type": "CorridorKey2Basic",
+      "pos": [
+        406.780859375,
+        160
+      ],
+      "size": [
+        270,
+        170
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "CORRIDORKEY2_MODEL",
+          "link": 1
+        },
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 2
+        },
+        {
+          "localized_name": "alpha_hint",
+          "name": "alpha_hint",
+          "shape": 7,
+          "type": "MASK",
+          "link": null
+        },
+        {
+          "localized_name": "hint_quality",
+          "name": "hint_quality",
+          "type": "COMBO",
+          "widget": {
+            "name": "hint_quality"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "invert_hint",
+          "name": "invert_hint",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "invert_hint"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "despill",
+          "name": "despill",
+          "type": "FLOAT",
+          "widget": {
+            "name": "despill"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "screen",
+          "name": "screen",
+          "type": "COMBO",
+          "widget": {
+            "name": "screen"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "foreground",
+          "name": "foreground",
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "localized_name": "alpha",
+          "name": "alpha",
+          "type": "MASK",
+          "links": [
+            4
+          ]
+        },
+        {
+          "localized_name": "rgba",
+          "name": "rgba",
+          "type": "IMAGE",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CorridorKey2Basic"
+      },
+      "widgets_values": [
+        "clean matte (0.95)",
+        false,
+        0.5,
+        "green"
+      ],
+      "widgets_values_named": {
+        "hint_quality": "clean matte (0.95)",
+        "invert_hint": false,
+        "despill": 0.5,
+        "screen": "green"
+      }
+    },
+    {
+      "id": 4,
+      "type": "SaveImage",
+      "pos": [
+        756.780859375,
+        120
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 3
+        },
+        {
+          "localized_name": "filename_prefix",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "corridorkey2/rgba"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "corridorkey2/rgba"
+      }
+    },
+    {
+      "id": 5,
+      "type": "MaskPreview",
+      "pos": [
+        756.780859375,
+        520
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "mask",
+          "name": "mask",
+          "type": "MASK",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "mask",
+          "name": "mask",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MaskPreview"
+      }
+    },
+    {
+      "id": 6,
+      "type": "MarkdownNote",
+      "pos": [
+        40,
+        -310
+      ],
+      "size": [
+        760,
+        340
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "About this workflow",
+      "properties": {},
+      "widgets_values": [
+        "## CorridorKey 2.0: basic keying\n\nKeys a green/blue-screen clip with no settings to tune. The first run downloads the model (about 5 GB) into `models/corridorkey2`.\n\n**Your footage:** replace **Demo Clip** with **Load Video → Get Video Components** (or an image sequence loader) and connect its `images`. The Demo Clip is a synthetic green-screen shot with its exact matte, so every example runs without media.\n\n- **alpha_hint** (optional): a rough subject mask. One mask = hint on the first frame, one per frame = per-frame hint. White = subject.\n- **hint_quality**: how much to trust the hint (clean matte, rough matte, loose hint).\n- **despill**: removes screen colour from the foreground. Changing it re-runs the keyer; use the Despill node instead to tweak without re-keying.\n\nOutputs: straight sRGB foreground, alpha, and RGBA saved as a PNG sequence in `output/corridorkey2`."
+      ],
+      "widgets_values_named": {
+        "text": "## CorridorKey 2.0: basic keying\n\nKeys a green/blue-screen clip with no settings to tune. The first run downloads the model (about 5 GB) into `models/corridorkey2`.\n\n**Your footage:** replace **Demo Clip** with **Load Video → Get Video Components** (or an image sequence loader) and connect its `images`. The Demo Clip is a synthetic green-screen shot with its exact matte, so every example runs without media.\n\n- **alpha_hint** (optional): a rough subject mask. One mask = hint on the first frame, one per frame = per-frame hint. White = subject.\n- **hint_quality**: how much to trust the hint (clean matte, rough matte, loose hint).\n- **despill**: removes screen colour from the foreground. Changing it re-runs the keyer; use the Despill node instead to tweak without re-keying.\n\nOutputs: straight sRGB foreground, alpha, and RGBA saved as a PNG sequence in `output/corridorkey2`."
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      1,
+      2,
+      0,
+      3,
+      0,
+      "CORRIDORKEY2_MODEL"
+    ],
+    [
+      2,
+      1,
+      0,
+      3,
+      1,
+      "IMAGE"
+    ],
+    [
+      3,
+      3,
+      2,
+      4,
+      0,
+      "IMAGE"
+    ],
+    [
+      4,
+      3,
+      1,
+      5,
+      0,
+      "MASK"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.811,
+      "offset": [
+        34.0,
+        414.0
+      ]
+    }
+  },
+  "version": 0.4
+}

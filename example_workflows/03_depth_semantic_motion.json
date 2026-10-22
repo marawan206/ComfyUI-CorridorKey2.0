@@ -1,0 +1,1353 @@
+{
+  "id": "d88dca5a-c9e6-4c76-bb23-01fc1e3006e7",
+  "revision": 0,
+  "last_node_id": 17,
+  "last_link_id": 21,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "CorridorKey2DemoClip",
+      "pos": [
+        40,
+        360
+      ],
+      "size": [
+        277.237890625,
+        242
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "frames",
+          "name": "frames",
+          "type": "INT",
+          "widget": {
+            "name": "frames"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "screen",
+          "name": "screen",
+          "type": "COMBO",
+          "widget": {
+            "name": "screen"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "spill",
+          "name": "spill",
+          "type": "FLOAT",
+          "widget": {
+            "name": "spill"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "noise",
+          "name": "noise",
+          "type": "FLOAT",
+          "widget": {
+            "name": "noise"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "seed",
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            3,
+            9,
+            14,
+            19
+          ]
+        },
+        {
+          "localized_name": "true_alpha",
+          "name": "true_alpha",
+          "type": "MASK",
+          "links": [
+            1
+          ]
+        },
+        {
+          "localized_name": "true_foreground",
+          "name": "true_foreground",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CorridorKey2DemoClip"
+      },
+      "widgets_values": [
+        24,
+        1024,
+        576,
+        "green",
+        0.35,
+        0.01,
+        11
+      ],
+      "widgets_values_named": {
+        "frames": 24,
+        "width": 1024,
+        "height": 576,
+        "screen": "green",
+        "spill": 0.35,
+        "noise": 0.01,
+        "seed": 11
+      }
+    },
+    {
+      "id": 2,
+      "type": "CorridorKey2ModelLoader",
+      "pos": [
+        40,
+        740
+      ],
+      "size": [
+        286.780859375,
+        130
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "weights",
+          "name": "weights",
+          "type": "COMBO",
+          "widget": {
+            "name": "weights"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "auto_download",
+          "name": "auto_download",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "auto_download"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "keep_on_gpu",
+          "name": "keep_on_gpu",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "keep_on_gpu"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "vram_reserve_gb",
+          "name": "vram_reserve_gb",
+          "type": "FLOAT",
+          "widget": {
+            "name": "vram_reserve_gb"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "CORRIDORKEY2_MODEL",
+          "links": [
+            2,
+            8,
+            13,
+            18
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CorridorKey2ModelLoader"
+      },
+      "widgets_values": [
+        "corridorkey_v2.safetensors",
+        true,
+        false,
+        0.5
+      ],
+      "widgets_values_named": {
+        "weights": "corridorkey_v2.safetensors",
+        "auto_download": true,
+        "keep_on_gpu": false,
+        "vram_reserve_gb": 0.5
+      }
+    },
+    {
+      "id": 3,
+      "type": "CorridorKey2HintPrep",
+      "pos": [
+        406.780859375,
+        40
+      ],
+      "size": [
+        270.0943359375,
+        198
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "mask",
+          "name": "mask",
+          "type": "MASK",
+          "link": 1
+        },
+        {
+          "localized_name": "match_frames",
+          "name": "match_frames",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "localized_name": "invert",
+          "name": "invert",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "invert"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "threshold",
+          "name": "threshold",
+          "type": "FLOAT",
+          "widget": {
+            "name": "threshold"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "grow_px",
+          "name": "grow_px",
+          "type": "FLOAT",
+          "widget": {
+            "name": "grow_px"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "blur_px",
+          "name": "blur_px",
+          "type": "FLOAT",
+          "widget": {
+            "name": "blur_px"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "frame",
+          "name": "frame",
+          "type": "COMBO",
+          "widget": {
+            "name": "frame"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "frame_index",
+          "name": "frame_index",
+          "type": "INT",
+          "widget": {
+            "name": "frame_index"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "mask",
+          "name": "mask",
+          "type": "MASK",
+          "links": [
+            10,
+            15
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CorridorKey2HintPrep"
+      },
+      "widgets_values": [
+        false,
+        0.5,
+        0,
+        0,
+        "first",
+        0
+      ],
+      "widgets_values_named": {
+        "invert": false,
+        "threshold": 0.5,
+        "grow_px": 0,
+        "blur_px": 0,
+        "frame": "first",
+        "frame_index": 0
+      }
+    },
+    {
+      "id": 4,
+      "type": "CorridorKey2DepthNormals",
+      "pos": [
+        406.780859375,
+        360
+      ],
+      "size": [
+        320.7212890625,
+        242
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "CORRIDORKEY2_MODEL",
+          "link": 2
+        },
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 3
+        },
+        {
+          "localized_name": "max_resolution",
+          "name": "max_resolution",
+          "type": "INT",
+          "widget": {
+            "name": "max_resolution"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "resolution_level",
+          "name": "resolution_level",
+          "type": "INT",
+          "widget": {
+            "name": "resolution_level"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "lock_camera",
+          "name": "lock_camera",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "lock_camera"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "fov_x_degrees",
+          "name": "fov_x_degrees",
+          "type": "FLOAT",
+          "widget": {
+            "name": "fov_x_degrees"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "depth_style",
+          "name": "depth_style",
+          "type": "COMBO",
+          "widget": {
+            "name": "depth_style"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "normal_convention",
+          "name": "normal_convention",
+          "type": "COMBO",
+          "widget": {
+            "name": "normal_convention"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "batch_size",
+          "name": "batch_size",
+          "type": "INT",
+          "widget": {
+            "name": "batch_size"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "geometry",
+          "name": "geometry",
+          "type": "MOGE_GEOMETRY",
+          "links": [
+            6
+          ]
+        },
+        {
+          "localized_name": "depth",
+          "name": "depth",
+          "type": "IMAGE",
+          "links": [
+            4
+          ]
+        },
+        {
+          "localized_name": "normals",
+          "name": "normals",
+          "type": "IMAGE",
+          "links": [
+            5
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CorridorKey2DepthNormals"
+      },
+      "widgets_values": [
+        1024,
+        9,
+        true,
+        0,
+        "turbo",
+        "OpenGL",
+        4
+      ],
+      "widgets_values_named": {
+        "max_resolution": 1024,
+        "resolution_level": 9,
+        "lock_camera": true,
+        "fov_x_degrees": 0,
+        "depth_style": "turbo",
+        "normal_convention": "OpenGL",
+        "batch_size": 4
+      }
+    },
+    {
+      "id": 5,
+      "type": "PreviewImage",
+      "pos": [
+        810.4826171875,
+        40
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      }
+    },
+    {
+      "id": 6,
+      "type": "PreviewImage",
+      "pos": [
+        1160.4826171875,
+        40
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      }
+    },
+    {
+      "id": 7,
+      "type": "MoGeRender",
+      "pos": [
+        810.4826171875,
+        400
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "moge_geometry",
+          "name": "moge_geometry",
+          "type": "MOGE_GEOMETRY",
+          "link": 6
+        },
+        {
+          "localized_name": "output",
+          "name": "output",
+          "type": "COMBO",
+          "widget": {
+            "name": "output"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            7
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MoGeRender"
+      },
+      "widgets_values": [
+        "normal_directx"
+      ],
+      "widgets_values_named": {
+        "output": "normal_directx"
+      }
+    },
+    {
+      "id": 8,
+      "type": "PreviewImage",
+      "pos": [
+        1160.4826171875,
+        400
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 7
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      }
+    },
+    {
+      "id": 9,
+      "type": "CorridorKey2SemanticIdentity",
+      "pos": [
+        406.780859375,
+        760
+      ],
+      "size": [
+        323.7017578125,
+        170
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "CORRIDORKEY2_MODEL",
+          "link": 8
+        },
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 9
+        },
+        {
+          "localized_name": "reference_mask",
+          "name": "reference_mask",
+          "shape": 7,
+          "type": "MASK",
+          "link": 10
+        },
+        {
+          "localized_name": "resolution",
+          "name": "resolution",
+          "type": "INT",
+          "widget": {
+            "name": "resolution"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "reference_frame",
+          "name": "reference_frame",
+          "type": "INT",
+          "widget": {
+            "name": "reference_frame"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "sharpness",
+          "name": "sharpness",
+          "type": "FLOAT",
+          "widget": {
+            "name": "sharpness"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "batch_size",
+          "name": "batch_size",
+          "type": "INT",
+          "widget": {
+            "name": "batch_size"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "features_pca",
+          "name": "features_pca",
+          "type": "IMAGE",
+          "links": [
+            11
+          ]
+        },
+        {
+          "localized_name": "subject_mask",
+          "name": "subject_mask",
+          "type": "MASK",
+          "links": [
+            12
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CorridorKey2SemanticIdentity"
+      },
+      "widgets_values": [
+        768,
+        0,
+        10,
+        4
+      ],
+      "widgets_values_named": {
+        "resolution": 768,
+        "reference_frame": 0,
+        "sharpness": 10,
+        "batch_size": 4
+      }
+    },
+    {
+      "id": 10,
+      "type": "PreviewImage",
+      "pos": [
+        810.4826171875,
+        760
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      }
+    },
+    {
+      "id": 11,
+      "type": "MaskPreview",
+      "pos": [
+        1160.4826171875,
+        760
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "mask",
+          "name": "mask",
+          "type": "MASK",
+          "link": 12
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "mask",
+          "name": "mask",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MaskPreview"
+      }
+    },
+    {
+      "id": 12,
+      "type": "CorridorKey2MotionTracking",
+      "pos": [
+        406.780859375,
+        1160
+      ],
+      "size": [
+        315.7173828125,
+        194
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "CORRIDORKEY2_MODEL",
+          "link": 13
+        },
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 14
+        },
+        {
+          "localized_name": "reference_mask",
+          "name": "reference_mask",
+          "shape": 7,
+          "type": "MASK",
+          "link": 15
+        },
+        {
+          "localized_name": "resolution",
+          "name": "resolution",
+          "type": "INT",
+          "widget": {
+            "name": "resolution"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "reference_frame",
+          "name": "reference_frame",
+          "type": "INT",
+          "widget": {
+            "name": "reference_frame"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "top_k",
+          "name": "top_k",
+          "type": "INT",
+          "widget": {
+            "name": "top_k"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "temperature",
+          "name": "temperature",
+          "type": "FLOAT",
+          "widget": {
+            "name": "temperature"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "track_features",
+          "name": "track_features",
+          "type": "COMBO",
+          "widget": {
+            "name": "track_features"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "identity_pca",
+          "name": "identity_pca",
+          "type": "IMAGE",
+          "links": [
+            16
+          ]
+        },
+        {
+          "localized_name": "motion_energy",
+          "name": "motion_energy",
+          "type": "MASK",
+          "links": [
+            17
+          ]
+        },
+        {
+          "localized_name": "tracked_mask",
+          "name": "tracked_mask",
+          "type": "MASK",
+          "links": [
+            20
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CorridorKey2MotionTracking"
+      },
+      "widgets_values": [
+        512,
+        0,
+        8,
+        0.05,
+        "encoder"
+      ],
+      "widgets_values_named": {
+        "resolution": 512,
+        "reference_frame": 0,
+        "top_k": 8,
+        "temperature": 0.05,
+        "track_features": "encoder"
+      }
+    },
+    {
+      "id": 13,
+      "type": "PreviewImage",
+      "pos": [
+        810.4826171875,
+        1160
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 16
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      }
+    },
+    {
+      "id": 14,
+      "type": "MaskPreview",
+      "pos": [
+        1160.4826171875,
+        1160
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "mask",
+          "name": "mask",
+          "type": "MASK",
+          "link": 17
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "mask",
+          "name": "mask",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MaskPreview"
+      }
+    },
+    {
+      "id": 15,
+      "type": "CorridorKey2Basic",
+      "pos": [
+        1380.4826171875,
+        1160
+      ],
+      "size": [
+        270,
+        170
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "CORRIDORKEY2_MODEL",
+          "link": 18
+        },
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 19
+        },
+        {
+          "localized_name": "alpha_hint",
+          "name": "alpha_hint",
+          "shape": 7,
+          "type": "MASK",
+          "link": 20
+        },
+        {
+          "localized_name": "hint_quality",
+          "name": "hint_quality",
+          "type": "COMBO",
+          "widget": {
+            "name": "hint_quality"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "invert_hint",
+          "name": "invert_hint",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "invert_hint"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "despill",
+          "name": "despill",
+          "type": "FLOAT",
+          "widget": {
+            "name": "despill"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "screen",
+          "name": "screen",
+          "type": "COMBO",
+          "widget": {
+            "name": "screen"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "foreground",
+          "name": "foreground",
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "localized_name": "alpha",
+          "name": "alpha",
+          "type": "MASK",
+          "links": null
+        },
+        {
+          "localized_name": "rgba",
+          "name": "rgba",
+          "type": "IMAGE",
+          "links": [
+            21
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CorridorKey2Basic"
+      },
+      "widgets_values": [
+        "rough matte (0.75)",
+        false,
+        0.5,
+        "green"
+      ],
+      "widgets_values_named": {
+        "hint_quality": "rough matte (0.75)",
+        "invert_hint": false,
+        "despill": 0.5,
+        "screen": "green"
+      }
+    },
+    {
+      "id": 16,
+      "type": "SaveImage",
+      "pos": [
+        1730.4826171875,
+        1160
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 21
+        },
+        {
+          "localized_name": "filename_prefix",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "corridorkey2/tracked_hint_rgba"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "corridorkey2/tracked_hint_rgba"
+      }
+    },
+    {
+      "id": 17,
+      "type": "MarkdownNote",
+      "pos": [
+        40,
+        -370
+      ],
+      "size": [
+        780,
+        320
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "About this workflow",
+      "properties": {},
+      "widgets_values": [
+        "## Depth, normals, semantic identity and motion tracking\n\nThe frozen foundation models inside CorridorKey 2.0, exposed as their own tools:\n\n- **Depth & Normals** (MoGe-2): clip-consistent depth and surface orientation. `geometry` works with the core MoGe nodes (Render MoGe Geometry, Convert MoGe Point Map to Mesh).\n- **Semantic Identity** (C-RADIOv4): a stable feature-colour video, and with a reference mask a per-frame mask of the same subject.\n- **Motion Tracking** (RVM): identity features, motion energy, and a reference mask carried through the clip.\n\nHere the tracked mask is fed back into the keyer as a per-frame hint (rough matte quality).\n\n**Your footage:** replace **Demo Clip** with **Load Video → Get Video Components** (or an image sequence loader) and connect its `images`. The Demo Clip is a synthetic green-screen shot with its exact matte, so every example runs without media. Paint the reference mask on one frame and set `reference_frame`."
+      ],
+      "widgets_values_named": {
+        "text": "## Depth, normals, semantic identity and motion tracking\n\nThe frozen foundation models inside CorridorKey 2.0, exposed as their own tools:\n\n- **Depth & Normals** (MoGe-2): clip-consistent depth and surface orientation. `geometry` works with the core MoGe nodes (Render MoGe Geometry, Convert MoGe Point Map to Mesh).\n- **Semantic Identity** (C-RADIOv4): a stable feature-colour video, and with a reference mask a per-frame mask of the same subject.\n- **Motion Tracking** (RVM): identity features, motion energy, and a reference mask carried through the clip.\n\nHere the tracked mask is fed back into the keyer as a per-frame hint (rough matte quality).\n\n**Your footage:** replace **Demo Clip** with **Load Video → Get Video Components** (or an image sequence loader) and connect its `images`. The Demo Clip is a synthetic green-screen shot with its exact matte, so every example runs without media. Paint the reference mask on one frame and set `reference_frame`."
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      1,
+      3,
+      0,
+      "MASK"
+    ],
+    [
+      2,
+      2,
+      0,
+      4,
+      0,
+      "CORRIDORKEY2_MODEL"
+    ],
+    [
+      3,
+      1,
+      0,
+      4,
+      1,
+      "IMAGE"
+    ],
+    [
+      4,
+      4,
+      1,
+      5,
+      0,
+      "IMAGE"
+    ],
+    [
+      5,
+      4,
+      2,
+      6,
+      0,
+      "IMAGE"
+    ],
+    [
+      6,
+      4,
+      0,
+      7,
+      0,
+      "MOGE_GEOMETRY"
+    ],
+    [
+      7,
+      7,
+      0,
+      8,
+      0,
+      "IMAGE"
+    ],
+    [
+      8,
+      2,
+      0,
+      9,
+      0,
+      "CORRIDORKEY2_MODEL"
+    ],
+    [
+      9,
+      1,
+      0,
+      9,
+      1,
+      "IMAGE"
+    ],
+    [
+      10,
+      3,
+      0,
+      9,
+      2,
+      "MASK"
+    ],
+    [
+      11,
+      9,
+      0,
+      10,
+      0,
+      "IMAGE"
+    ],
+    [
+      12,
+      9,
+      1,
+      11,
+      0,
+      "MASK"
+    ],
+    [
+      13,
+      2,
+      0,
+      12,
+      0,
+      "CORRIDORKEY2_MODEL"
+    ],
+    [
+      14,
+      1,
+      0,
+      12,
+      1,
+      "IMAGE"
+    ],
+    [
+      15,
+      3,
+      0,
+      12,
+      2,
+      "MASK"
+    ],
+    [
+      16,
+      12,
+      0,
+      13,
+      0,
+      "IMAGE"
+    ],
+    [
+      17,
+      12,
+      1,
+      14,
+      0,
+      "MASK"
+    ],
+    [
+      18,
+      2,
+      0,
+      15,
+      0,
+      "CORRIDORKEY2_MODEL"
+    ],
+    [
+      19,
+      1,
+      0,
+      15,
+      1,
+      "IMAGE"
+    ],
+    [
+      20,
+      12,
+      2,
+      15,
+      2,
+      "MASK"
+    ],
+    [
+      21,
+      15,
+      2,
+      16,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.422,
+      "offset": [
+        102.2,
+        542.2
+      ]
+    }
+  },
+  "version": 0.4
+}
