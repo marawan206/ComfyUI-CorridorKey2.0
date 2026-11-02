@@ -407,6 +407,9 @@ stops with an error in CorridorKey's runtime), LoRA fine-tuning, and keying on A
   access and copy `models/corridorkey2` over. The loader checks for every file and names any that are missing.
 - **CUDA out of memory.** Pick a shorter `temporal_window`, set `low_vram: on`, lower `process_scale`, or set a
   smaller `vram_budget_gb`. Other software using the GPU reduces what is available.
+- **`index_copy_(): self and source expected to have the same dtype, but got (self) Float and (source)
+  BFloat16`.** PyTorch 2.12 and newer normalise in float32 under autocast, which versions of this pack before
+  1.1.0 did not expect. Update the pack.
 - **A run is refused because of the Windows commit limit**, or "not enough memory" with free RAM: the page file
   is too small for that window or crop; see [Windows page file](#temporal-windows-and-vram).
 - **Low-VRAM mode says there is not enough disk space.** Free space on the drive that holds ComfyUI's temp folder, key the clip

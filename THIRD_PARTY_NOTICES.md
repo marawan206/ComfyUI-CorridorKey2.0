@@ -21,8 +21,11 @@ released under the same Corridor Key Licence.
 
 ### Changes made to the licensed material
 
-- `corridorkey/` and `third_party/MoGe/` are copied from upstream commit `485f5e9`
-  **without modification**.
+- `corridorkey/` and `third_party/MoGe/` are copied from upstream commit `485f5e9`.
+  One change, in `corridorkey/blocks.py`: `RMSNorm` and `LayerNorm2d` cast their
+  output back to the input dtype, because PyTorch 2.12 and newer run `rms_norm`
+  in float32 under autocast, which stopped inference with a dtype error. It is
+  the same change as upstream pull request #6.
 - `ck_comfy/pipeline.py` is adapted from `corridorkey/runtime.py`
   (`run_inference`, `hann_stage1_stream` and the foundation pre-passes): frames
   are read from and written to in-memory tensors, hints can be placed on any
