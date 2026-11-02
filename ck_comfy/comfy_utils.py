@@ -102,11 +102,38 @@ def commit_budget_gb(model_handle, host_bytes: int = 0) -> float | None:
 def make_room(want_bytes: int | None = None) -> None:
     """Ask ComfyUI to move other models off the GPU until ``want_bytes`` are free (all VRAM if None)."""
     device = torch_device()
-    if device.type != "cuda":
+    if device.type not in ("cuda", "mps"):
         return
-    total = torch.cuda.get_device_properties(device).total_memory
+    total = mm.get_total_memory(device)
     mm.free_memory(min(total, want_bytes or total), device)
     mm.soft_empty_cache()
+
+
+def keying_device() -> torch.device:
+    """The device the keyer runs on: an NVIDIA GPU, or (experimental) Apple Silicon. Raises otherwise."""
+    device = torch_device()
+    if device.type in ("cuda", "mps"):
+        return device
+    raise RuntimeError(
+        "CorridorKey 2.0 keying needs an NVIDIA GPU (CUDA) or an Apple Silicon Mac (Metal/MPS); ComfyUI is "
+        f"running on '{device.type}'. On the CPU a single frame would take minutes.")
+
+
+def mps_budget_gb(model_handle, host_bytes: int = 0) -> float:
+    """Apple Silicon: unified memory the keyer may use for weights and activations, in GB.
+
+    The GPU shares RAM with everything else, so the budget is the free RAM
+    (plus this model's weights already resident) minus the RAM the run's
+    outputs will still take, capped by Metal's recommended working-set size.
+    """
+    device = torch.device("mps")
+    free = mm.get_free_memory(device) + model_handle.base.resident_bytes(device) - host_bytes
+    try:
+        cap = torch.mps.recommended_max_memory()
+    except (AttributeError, RuntimeError):
+        cap = 0
+    budget = min(free, cap) if cap else free
+    return budget / 2**30
 
 
 def memory_budget(model_handle, override_gb: float = 0.0, *, want_bytes: int | None = None,
@@ -119,10 +146,14 @@ def memory_budget(model_handle, override_gb: float = 0.0, *, want_bytes: int | N
     which is returned so a run can refuse a forced setting above it.
     """
     device = torch_device()
-    if device.type != "cuda":
+    if device.type not in ("cuda", "mps"):
         return 0.0, None
     override = float(override_gb or 0.0)
     make_room(int(override * 2**30) if override > 0 else want_bytes)
+    if device.type == "mps":
+        budget = override if override > 0 else (
+            mps_budget_gb(model_handle, host_bytes) - model_handle.vram_reserve_gb)
+        return max(0.5, budget), None
     if override > 0:
         budget = override
     else:

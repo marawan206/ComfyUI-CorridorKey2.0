@@ -172,7 +172,8 @@ class CorridorKey2Composite(io.ComfyNode):
                 "Places a straight foreground over a checkerboard, a solid color or a background plate, "
                 "blended in linear light, with optional light wrap. Also outputs the foreground as RGBA."),
             inputs=[
-                io.Image.Input("foreground", tooltip="Straight (un-premultiplied) sRGB foreground."),
+                io.Image.Input("foreground", tooltip="Straight (un-premultiplied) foreground, sRGB or linear "
+                                                     "(see colorspace)."),
                 io.Mask.Input("alpha",
                               tooltip="Matte, 1 = subject. 1 mask or one per frame; resized to the foreground."),
                 io.Image.Input("background", optional=True,
@@ -190,16 +191,22 @@ class CorridorKey2Composite(io.ComfyNode):
                 io.Boolean.Input("premultiply", default=False,
                                  tooltip="rgba output: multiply the color by alpha (premultiplied, as compositing "
                                          "apps expect for premultiplied files). Off: straight color."),
+                io.Combo.Input("colorspace", options=["sRGB", "linear"], default="sRGB",
+                               tooltip="sRGB: the foreground, background plate and composite are display sRGB. "
+                                       "linear: they are scene-linear and unclamped, as from the Advanced keyer "
+                                       "with output_colorspace linear (save with Save Image (Advanced) as EXR, "
+                                       "input_color_space linear). Checker and solid_color are converted for you."),
             ],
             outputs=[
-                io.Image.Output(display_name="composite", tooltip="Foreground over the background (sRGB)."),
+                io.Image.Output(display_name="composite",
+                                tooltip="Foreground over the background, in the chosen colorspace."),
                 io.Image.Output(display_name="rgba", tooltip="Foreground color with alpha as a 4th channel."),
             ],
         )
 
     @classmethod
     def execute(cls, foreground, alpha, background_mode, solid_color, light_wrap_size, light_wrap_intensity,
-                premultiply, background=None) -> io.NodeOutput:
+                premultiply, background=None, colorspace="sRGB") -> io.NodeOutput:
         T, h, w = foreground.shape[0], foreground.shape[1], foreground.shape[2]
         if background_mode == "image":
             if background is None:
@@ -209,12 +216,18 @@ class CorridorKey2Composite(io.ComfyNode):
             bg = parse_hex_color(solid_color)
         else:
             bg = color.checker(h, w)
+        linear = colorspace == "linear"
+        if linear and background_mode != "image":
+            bg = color.srgb_to_linear(bg)
         device = torch_device()
         progress = progress_steps(2 * T)
-        comp = matte_ops.composite(foreground, alpha, bg, light_wrap_size, light_wrap_intensity,
+        comp = matte_ops.composite(foreground, alpha, bg, light_wrap_size, light_wrap_intensity, linear=linear,
                                    device=device, progress=progress)
         rgba = matte_ops.to_rgba(foreground, alpha, premultiplied=premultiply, device=device, progress=progress)
-        return io.NodeOutput(comp, rgba, ui=ui.PreviewImage(preview_frames(comp), cls=cls))
+        view = preview_frames(comp)
+        if linear:
+            view = color.linear_to_srgb(view.clamp(min=0.0)).clamp(0.0, 1.0)
+        return io.NodeOutput(comp, rgba, ui=ui.PreviewImage(view, cls=cls))
 
 
 NODES = [CorridorKey2Despill, CorridorKey2MatteRefine, CorridorKey2Composite]

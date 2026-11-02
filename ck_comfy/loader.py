@@ -42,6 +42,14 @@ LOW_VRAM_ON = SimpleNamespace(
 )
 
 
+def empty_device_cache() -> None:
+    """Return cached, unused GPU memory to the driver (CUDA or Apple Metal)."""
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    elif getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
+        torch.mps.empty_cache()
+
+
 def _module_bytes(module: torch.nn.Module) -> int:
     total = 0
     for t in list(module.parameters()) + list(module.buffers()):
@@ -96,8 +104,7 @@ class CorridorKeyBase:
             for name, on_gpu in (("foundations", foundations), ("stage1", stage1), ("stage2", stage2)):
                 if on_gpu:
                     getattr(self.model, name).to(device)
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        empty_device_cache()
 
     def offload(self) -> None:
         self.place(torch.device("cpu"), foundations=False, stage1=False, stage2=False)
@@ -149,8 +156,8 @@ class CorridorKeyModel:
                     h.remove()
                 if not self.keep_on_gpu:
                     self.base.offload()
-                elif torch.cuda.is_available():
-                    torch.cuda.empty_cache()  # release the run's activations, keep the weights
+                else:
+                    empty_device_cache()  # release the run's activations, keep the weights
 
 
 def _cache_key(assets: AssetPaths) -> tuple:
@@ -244,5 +251,4 @@ def clear_cache() -> None:
             base.offload()
         _CACHE.clear()
     gc.collect()
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
+    empty_device_cache()

@@ -26,9 +26,11 @@ What changed:
 
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import uuid
+import warnings
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -41,7 +43,7 @@ from ..corridorkey.runtime import _build_foundation_inputs, estimate_peak_vram_g
 from ..corridorkey.video_io import taper_weights, window_starts
 
 SHAPE_QUANTUM = 128
-AUTO_CHUNKS = (80, 48, 24, 8, 4, 2)
+AUTO_CHUNKS = (80, 48, 24, 8, 4, 2, 1)
 _VRAM_MARGIN_SCALE = 1.1
 _VRAM_MARGIN_GB = 0.3
 _PREP_BATCH = 8
@@ -70,6 +72,7 @@ class KeySettings:
     fg_space: str = "srgb"            # "srgb" (display, clamped) or "linear" (unclamped)
     want_coarse: bool = False
     want_decision: bool = False
+    force_float32: bool = False       # run the network in float32 even where bf16 autocast exists
 
 
 @dataclass
@@ -154,7 +157,47 @@ def resize_to(x: torch.Tensor, hw: tuple[int, int]) -> torch.Tensor:
     if tuple(x.shape[-2:]) == tuple(hw):
         return x
     shrinking = hw[0] < x.shape[-2] or hw[1] < x.shape[-1]
+    if shrinking and x.device.type == "mps":
+        # Antialiased resampling is not implemented on every PyTorch/Metal version: do it on the CPU.
+        return F.interpolate(x.cpu(), size=hw, mode="bicubic", align_corners=False, antialias=True).to(x.device)
     return F.interpolate(x, size=hw, mode="bicubic", align_corners=False, antialias=shrinking)
+
+
+class Precision:
+    """bf16 autocast on the run's device, as upstream does on CUDA.
+
+    On CUDA (and the CPU) this is exactly ``torch.autocast(device, bfloat16)``.
+    Where bf16 autocast is not available (older PyTorch or macOS on Apple
+    Silicon) the network runs in float32 instead: inputs are cast with
+    :meth:`cast` and :meth:`autocast` is a no-op. Results are then slightly
+    more precise than upstream's, and memory use higher.
+    """
+
+    def __init__(self, device, force_float32: bool = False):
+        self.device_type = torch.device(device).type
+        self.enabled = not force_float32 and self._probe(torch.device(device))
+
+    @staticmethod
+    def _probe(device: torch.device) -> bool:
+        if device.type == "cuda":
+            return True
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                with torch.autocast(device.type, dtype=torch.bfloat16):
+                    a = torch.ones(8, 8, device=device)
+                    out = F.linear(a, a)
+            return out.dtype == torch.bfloat16
+        except Exception:  # noqa: BLE001 - any failure means: run in float32
+            return False
+
+    def autocast(self):
+        if self.enabled:
+            return torch.autocast(self.device_type, dtype=torch.bfloat16)
+        return contextlib.nullcontext()
+
+    def cast(self, x: torch.Tensor) -> torch.Tensor:
+        return x if self.enabled or x is None else x.float()
 
 
 class FrameSource:
@@ -164,10 +207,12 @@ class FrameSource:
     how a reversed (backward) segment reads the clip without copying it.
     """
 
-    def __init__(self, images: torch.Tensor, geom: Geometry, settings: KeySettings, device):
+    def __init__(self, images: torch.Tensor, geom: Geometry, settings: KeySettings, device,
+                 precision: Precision | None = None):
         self.images = images
         self.geom = geom
         self.device = device
+        self.precision = precision or Precision(device, force_float32=settings.force_float32)
         self.pad = Padder(geom, device)
         self.input_linear = bool(settings.input_linear)
         self.gain = float(settings.linear_brightness)
@@ -255,16 +300,18 @@ def select_profile(shape_hw, num_frames: int, budget_gb: float, *, chunk: int | 
                    stride: int | None, low_vram: bool | None):
     """Pick (chunk, stride, low_vram, estimate_gb) for a clip.
 
-    Mirrors ``runtime.select_vram_profile`` (largest window first, a larger
-    low-VRAM window preferred over a smaller normal one) but never goes below
-    a 2/1 window when the clip has more than one frame, because 1/1 windows
-    cannot carry a hint forward.
+    Mirrors ``runtime.select_vram_profile``: the largest window that fits,
+    a larger low-VRAM window preferred over a smaller normal one, down to a
+    single-frame (1/1) window. A 1/1 window cannot carry a hint forward, so
+    it is only chosen when not even a 2/1 window fits; the caller warns about
+    it. When nothing fits, the 1/1 low-VRAM window is returned and
+    :func:`profile_fits` is False for it.
     """
     mp = shape_hw[0] * shape_hw[1] / 1e6
 
     def fits(c, lv):
         est = estimate_peak_vram_gb(mp, min(c, num_frames), lv)
-        return est * _VRAM_MARGIN_SCALE + _VRAM_MARGIN_GB <= budget_gb, est
+        return profile_fits(est, budget_gb), est
 
     if chunk is not None:
         chunk = max(1, int(chunk))
@@ -277,19 +324,22 @@ def select_profile(shape_hw, num_frames: int, budget_gb: float, *, chunk: int | 
         est = estimate_peak_vram_gb(mp, min(chunk, num_frames), bool(low_vram))
         return chunk, stride, bool(low_vram), est
 
-    floor = 2 if num_frames > 1 else 1
-    candidates = [c for c in AUTO_CHUNKS if c >= floor] or [floor]
     modes = (False, True) if low_vram is None else (bool(low_vram),)
-    for c in candidates:
+    for c in AUTO_CHUNKS:
         for lv in modes:
-            if lv is False and c not in (8, 24, 48, 80):
+            # Normal mode is only measured from 8-frame windows up; a forced "off" may still go below.
+            if lv is False and low_vram is None and c not in (8, 24, 48, 80):
                 continue
             ok, est = fits(c, lv)
             if ok:
                 return c, max(1, c // 2), lv, est
-    c = floor
     lv = True if low_vram is None else bool(low_vram)
-    return c, max(1, c // 2), lv, estimate_peak_vram_gb(mp, min(c, num_frames), lv)
+    return 1, 1, lv, estimate_peak_vram_gb(mp, 1, lv)
+
+
+def profile_fits(estimate_gb: float, budget_gb: float) -> bool:
+    """Whether an estimated peak fits a budget, with upstream's safety margin."""
+    return estimate_gb * _VRAM_MARGIN_SCALE + _VRAM_MARGIN_GB <= budget_gb
 
 
 # ---------------------------------------------------------------------------
@@ -315,7 +365,7 @@ def rvm_prepass(base, source: FrameSource, order: list[int], *, chunk: int,
         n = len(frames)
         rgb = F.interpolate(display.float(), size=(He, We), mode="bilinear",
                             align_corners=False).reshape(1, n, 3, He, We).clamp(0.0, 1.0)
-        with torch.autocast("cuda", dtype=torch.bfloat16):
+        with source.precision.autocast():
             feats, state = rvm(rgb, state=state)
         out[s:s + n] = ((feats.float().cpu() - mean) / std)[0].to(torch.float16)
         del display, rgb, feats
@@ -337,8 +387,8 @@ def foundation_prepass(base, source: FrameSource, order: list[int], *, chunk: in
         frames = order[s:s + chunk]
         n = len(frames)
         _, display = source.views(frames, need_model=False)
-        rgb_radio, rgb_moge = _build_foundation_inputs(display.unsqueeze(0))
-        with torch.autocast("cuda", dtype=torch.bfloat16):
+        rgb_radio, rgb_moge = _build_foundation_inputs(source.precision.cast(display).unsqueeze(0))
+        with source.precision.autocast():
             ff = base.foundations(rgb_cradio=rgb_radio.reshape(n, 3, *rgb_radio.shape[-2:]),
                                   rgb_moge=rgb_moge.reshape(n, 3, *rgb_moge.shape[-2:]))
         moge[s:s + n] = ff["moge"].float().cpu().numpy()
@@ -487,8 +537,8 @@ def stage1_stream(base, source: FrameSource, seg: _Segment, settings: KeySetting
             quality.fill_(-1.0)
 
         if found is None:
-            rgb_radio, rgb_moge = _build_foundation_inputs(display_chunk.unsqueeze(0))
-            with torch.autocast("cuda", dtype=torch.bfloat16):
+            rgb_radio, rgb_moge = _build_foundation_inputs(source.precision.cast(display_chunk).unsqueeze(0))
+            with source.precision.autocast():
                 ff = base.foundations(
                     rgb_cradio=rgb_radio.reshape(Tc, 3, *rgb_radio.shape[-2:]),
                     rgb_moge=rgb_moge.reshape(Tc, 3, *rgb_moge.shape[-2:]),
@@ -502,10 +552,11 @@ def stage1_stream(base, source: FrameSource, seg: _Segment, settings: KeySetting
             cradio_feat = torch.from_numpy(np.asarray(cradio_map[j0:j1]).copy()).unsqueeze(0).to(device).float()
         rvm_feat = seg.rvm[j0:j1].unsqueeze(0).to(device).float()
 
-        with torch.autocast("cuda", dtype=torch.bfloat16):
-            s1 = model.stage1(model_chunk.unsqueeze(0), hint, moge_feat,
+        prec = source.precision
+        with prec.autocast():
+            s1 = model.stage1(prec.cast(model_chunk).unsqueeze(0), prec.cast(hint), moge_feat,
                               cradio_feat=cradio_feat, rvm_feat=rvm_feat, t_stride=1.0,
-                              hint_quality=quality.to(device))
+                              hint_quality=prec.cast(quality.to(device)))
         baton_gpu = s1["baton"][0].float()
         next_start = starts[i + 1] if i + 1 < len(starts) else L
         if settings.carry_hint:
@@ -585,8 +636,8 @@ class _Writer:
             frames = [self.seg.order[j] for j, *_ in sub]
             model_view, _ = self.source.views(frames)
             baton = torch.from_numpy(np.stack([b for _, b, _, _ in sub])).to(device).float()
-            with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
-                logits = stage2(model_view.unsqueeze(0), baton.unsqueeze(0))
+            with torch.inference_mode(), self.source.precision.autocast():
+                logits = stage2(self.source.precision.cast(model_view).unsqueeze(0), baton.unsqueeze(0))
                 if isinstance(logits, tuple):
                     logits = logits[0]
             logits = logits[0].float()
@@ -653,8 +704,6 @@ def run(model_handle, images: torch.Tensor, hints: Hints, settings: KeySettings,
     window (the Windows commit limit): a run estimated above it raises before
     it starts instead of exhausting memory for every program on the machine."""
     cb = cb or Callbacks()
-    if torch.device(device).type != "cuda":
-        raise RuntimeError("CorridorKey 2.0 needs an NVIDIA GPU (CUDA).")
     if images.dim() != 4 or images.shape[-1] < 3:
         raise ValueError(f"Expected IMAGE frames (T,H,W,3); got {tuple(images.shape)}")
     T, h, w = int(images.shape[0]), int(images.shape[1]), int(images.shape[2])
@@ -672,8 +721,18 @@ def run(model_handle, images: torch.Tensor, hints: Hints, settings: KeySettings,
             f"room for {max(0.0, hard_limit_gb):.1f} GB. GPU memory counts against that limit, and running out "
             "of it makes memory allocations fail in every program. Use a shorter temporal_window, low_vram on "
             "or a lower process_scale, close other programs, or enlarge the page file.")
+    if settings.chunk is None and not profile_fits(estimate, budget_gb):
+        cb.log(f"[CorridorKey 2.0] warning: even a single-frame window{' in low-VRAM mode' if low_vram else ''} "
+               f"needs about "
+               f"{estimate * _VRAM_MARGIN_SCALE + _VRAM_MARGIN_GB:.1f} GB at "
+               f"{geom.model_hw[1]}x{geom.model_hw[0]} and about {budget_gb:.1f} GB is available, so this run "
+               "may run out of memory. Lower process_scale (Advanced keyer), close other programs that use "
+               "the GPU, or key a smaller resolution.")
     if longest > 1 and chunk == 1:
-        cb.log("[CorridorKey 2.0] 1/1 windows: hints are only used on the frames that have them")
+        cb.log("[CorridorKey 2.0] 1/1 windows: every frame is keyed on its own, so a hint only affects the "
+               "frame it is on and frames get less temporal context"
+               + (" (chosen because no 2-frame window fits the available GPU memory)"
+                  if settings.chunk is None else ""))
     units = T  # forward RVM pass
     for order, owned, kind in segments:
         units += len(window_starts(len(order), chunk, stride)) + sum(owned)
@@ -703,6 +762,9 @@ def run(model_handle, images: torch.Tensor, hints: Hints, settings: KeySettings,
             _check_spill_space(base, geom, segments, settings, temp_dir)
         base.configure_low_vram(low_vram)
         source = FrameSource(images, geom, settings, device)
+        if not source.precision.enabled and not settings.force_float32:
+            cb.log(f"[CorridorKey 2.0] bf16 autocast is not available on '{torch.device(device).type}' with this "
+                   "PyTorch; running in float32 (more memory, slightly different results).")
         spill = _Spill(temp_dir)
         try:
             base.place(device, foundations=True, stage1=not low_vram, stage2=False)

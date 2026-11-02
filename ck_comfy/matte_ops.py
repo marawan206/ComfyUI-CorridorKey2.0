@@ -396,9 +396,12 @@ def to_rgba(fg: torch.Tensor, alpha: torch.Tensor, *, premultiplied: bool = Fals
 
 
 def composite(fg_srgb: torch.Tensor, alpha: torch.Tensor, bg_srgb: torch.Tensor, wrap_size_px: float = 0.0,
-              wrap_intensity: float = 0.0, *, device=None, out: torch.Tensor | None = None,
+              wrap_intensity: float = 0.0, *, linear: bool = False, device=None, out: torch.Tensor | None = None,
               progress: StepFn | None = None) -> torch.Tensor:
     """Straight sRGB foreground over an sRGB background, blended in linear light; returns sRGB.
+
+    With ``linear`` the foreground, the background and the result are all
+    scene-linear instead, and nothing is clamped, so HDR values survive.
 
     ``bg_srgb`` is a color (3,), one frame (H,W,3) or a clip (N,H,W,3),
     resized to the foreground; a clip shorter than the foreground holds its
@@ -420,7 +423,7 @@ def composite(fg_srgb: torch.Tensor, alpha: torch.Tensor, bg_srgb: torch.Tensor,
     wrap = wrap_intensity > 0.0 and wrap_size_px > 0.0
 
     def background(frames: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor | None]:
-        lin = color.srgb_to_linear(frames.to(dev).clamp(0.0, 1.0))
+        lin = frames.to(dev) if linear else color.srgb_to_linear(frames.to(dev).clamp(0.0, 1.0))
         if frames.shape[1:3] == (1, 1):   # a solid color: broadcasts, and blurring changes nothing
             return lin, lin
         lin = _resize_images(lin, (h, w))
@@ -434,13 +437,13 @@ def composite(fg_srgb: torch.Tensor, alpha: torch.Tensor, bg_srgb: torch.Tensor,
         else:
             bg_lin, bg_blur = fixed
         a = _mask_chunk(alpha, s, e, (h, w), dev)
-        fg_lin = color.srgb_to_linear(fg[s:e].to(dev).clamp(0.0, 1.0))
+        fg_lin = fg[s:e].to(dev) if linear else color.srgb_to_linear(fg[s:e].to(dev).clamp(0.0, 1.0))
         a3 = a.unsqueeze(-1)
         comp = fg_lin * a3 + bg_lin * (1.0 - a3)
         if wrap:
             edge = blur(1.0 - a, wrap_size_px) * a
             comp = comp + wrap_intensity * bg_blur * edge.unsqueeze(-1)
-        out[s:e] = color.linear_to_srgb(comp.clamp(min=0.0)).clamp(0.0, 1.0).cpu()
+        out[s:e] = (comp if linear else color.linear_to_srgb(comp.clamp(min=0.0)).clamp(0.0, 1.0)).cpu()
     return out
 
 

@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-corridorkey2"
 description = "CorridorKey 2.0 green/blue-screen keying for ComfyUI: alpha hints and keyframes, temporal windows, depth and surface normals, semantic and motion tracking, matte refinement and LoRA fine-tuning."
-version = "1.0.0"
+version = "1.1.0"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = [

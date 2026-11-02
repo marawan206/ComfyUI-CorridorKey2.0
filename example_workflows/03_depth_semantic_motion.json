@@ -1095,14 +1095,14 @@
     },
     {
       "id": 16,
-      "type": "SaveImage",
+      "type": "SaveImageAdvanced",
       "pos": [
         1730.4826171875,
         1160
       ],
       "size": [
         270,
-        58
+        130
       ],
       "flags": {},
       "order": 16,
@@ -1122,6 +1122,33 @@
             "name": "filename_prefix"
           },
           "link": null
+        },
+        {
+          "localized_name": "format",
+          "name": "format",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "widget": {
+            "name": "format"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "bit_depth",
+          "name": "format.bit_depth",
+          "type": "COMBO",
+          "widget": {
+            "name": "format.bit_depth"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "input_color_space",
+          "name": "format.input_color_space",
+          "type": "COMBO",
+          "widget": {
+            "name": "format.input_color_space"
+          },
+          "link": null
         }
       ],
       "outputs": [
@@ -1134,10 +1161,16 @@
       ],
       "properties": {},
       "widgets_values": [
-        "corridorkey2/tracked_hint_rgba"
+        "corridorkey2/tracked_hint_rgba",
+        "png",
+        "16-bit",
+        "sRGB"
       ],
       "widgets_values_named": {
-        "filename_prefix": "corridorkey2/tracked_hint_rgba"
+        "filename_prefix": "corridorkey2/tracked_hint_rgba",
+        "format": "png",
+        "format.bit_depth": "16-bit",
+        "format.input_color_space": "sRGB"
       }
     },
     {

@@ -7,6 +7,14 @@ the result, and fine-tune the model on your own shots.
 
 > Unofficial integration. Not affiliated with, sponsored by or endorsed by Corridor Digital.
 
+**A thank-you to Corridor Crew.** CorridorKey 2.0 is a gift to artists, and this pack is one back: a free,
+open-source way to use it inside ComfyUI, built so that nothing from the original is lost on the way. It keys
+exactly like CorridorKey's own runtime (a test in this repository checks that frame for frame, see
+[Development](#development)) and adds ComfyUI conveniences on top. It is not, and will never be, sold.
+If you work in After Effects, Premiere Pro, DaVinci Resolve, Nuke or another host application, use the
+**[official CorridorKey plugin](https://corridorkey.com)**: buying it supports the people who made the model.
+Corridor Digital: if you would like anything here changed, open an issue or get in touch.
+
 ![Keyframe hint, refine and composite](example_workflows/02_advanced_keyframes_refine.jpg)
 
 ## Contents
@@ -24,6 +32,7 @@ the result, and fine-tune the model on your own shots.
 - [Fine-tuning](#fine-tuning)
 - [From the CorridorKey command line](#from-the-corridorkey-command-line)
 - [Troubleshooting](#troubleshooting)
+- [Apple Silicon (experimental)](#apple-silicon-experimental)
 - [Development](#development)
 - [Credits](#credits)
 - [Licence](#licence)
@@ -40,12 +49,14 @@ the result, and fine-tune the model on your own shots.
 | **Motion tracking** | **Motion Tracking** uses the RVM video model: identity features, motion energy, and a reference mask tracked through the clip, usable as a keying hint. |
 | **Advanced training losses** | **Fine-Tune (Basic)** and **Fine-Tune (Advanced)** train a LoRA on your shot with alpha, edge-band, Laplacian-pyramid, gradient, composition, foreground, temporal-coherence and deep-supervision losses. |
 | **Matte clean-up** | **Matte Refine** (clip, despeckle, fill holes, choke, soften, temporal smoothing, garbage and holdout mattes), **Despill**, and **Composite** with light wrap. These run on the keyer's outputs, so tweaking them never re-runs the model. |
+| **Image sequences and EXR** | **Load Image Sequence** reads a folder of frames like CorridorKey's own runtime: EXR plates with values above 1.0 kept, 16-bit PNG/TIFF at full precision, JPEG. The example workflows save with ComfyUI's **Save Image (Advanced)** as 16-bit PNG or EXR. |
 | **Demo clip** | A synthetic green-screen shot with hair, a veil, spill, noise and its exact matte, so every workflow can be tried and measured without footage. |
 
 ## Requirements
 
 - An NVIDIA GPU, RTX 30-series or newer. CorridorKey 2.0 needs about 4 GB of VRAM for footage up to 1440p and
   6 GB for 4K in low-VRAM mode; more VRAM allows longer temporal windows. Fine-tuning needs about 6 to 8 GB.
+  Keying also runs on Apple Silicon Macs, experimentally (see [Apple Silicon](#apple-silicon-experimental)).
 - ComfyUI 0.25.0 or newer. Tested with ComfyUI 0.42.0, PyTorch 2.11 (CUDA) and Python 3.12 on Windows 11 with
   an RTX 4090.
 - About 5.1 GB of disk space for the model files, and enough RAM for your clip (see
@@ -113,17 +124,17 @@ Other CorridorKey 2.0 runtime checkpoints named `corridorkey*.safetensors` place
 1. Restart ComfyUI after installing.
 2. Open **Workflow → Browse Templates**, find **ComfyUI-CorridorKey2.0** under custom nodes, and load
    **01_basic_keying**. It uses the Demo Clip node, so it runs without any footage.
-3. Press **Run**. The first run downloads the model (about 5 GB). The keyed RGBA frames are saved as PNGs in
-   `output/corridorkey2`.
-4. For your own shot, replace **Demo Clip** with **Load Video → Get Video Components** (or any image-sequence
-   loader) and connect its `images`.
+3. Press **Run**. The first run downloads the model (about 5 GB). The keyed RGBA frames are saved as 16-bit PNGs
+   in `output/corridorkey2`. To get EXRs instead, set the Save Image (Advanced) node's `format` to `exr`.
+4. For your own shot, replace **Demo Clip** with **Load Video → Get Video Components**, or with
+   **CorridorKey 2.0 Load Image Sequence** for a folder of frames (EXR, PNG, TIFF, JPEG), and connect its `images`.
 
 The four example workflows in [`example_workflows/`](example_workflows):
 
 | Workflow | Shows |
 |---|---|
-| `01_basic_keying` | Load Model → Basic keyer → RGBA PNG sequence |
-| `02_advanced_keyframes_refine` | A hint on frame 24 propagated both ways, Matte Refine, Despill, Composite with light wrap, Temporal Stability scores |
+| `01_basic_keying` | Load Model → Basic keyer → 16-bit RGBA PNG sequence |
+| `02_advanced_keyframes_refine` | A hint on frame 24 propagated both ways, Matte Refine, Despill, Composite with light wrap (saved as 16-bit PNG, RGBA as EXR), Temporal Stability scores |
 | `03_depth_semantic_motion` | Depth & Normals (with the core MoGe renderer), Semantic Identity, Motion Tracking, and the tracked mask used as a keying hint |
 | `04_finetune_lora` | Fine-Tune (Basic) → LoRA → keyer, with the loss graph, the check loss before and after training, and matte scores |
 
@@ -141,7 +152,7 @@ All nodes are in the **CorridorKey 2.0** category. Hover any input for a tooltip
 | **CorridorKey 2.0 Chroma Hint** | Quick difference key that gives a rough subject hint without painting one. |
 | **CorridorKey 2.0 Matte Refine** | Clip black/white (with edge rollback), despeckle, fill holes, choke, soften, temporal smoothing, garbage and holdout mattes. |
 | **CorridorKey 2.0 Despill** | Removes screen spill: average (CorridorKey's own), max or min limiting, optionally adding the removed spill to the other two channels. Keeps the alpha channel of RGBA input. |
-| **CorridorKey 2.0 Composite** | Linear-light composite over a checkerboard, a colour or a background clip, with light wrap; also outputs straight or premultiplied RGBA. |
+| **CorridorKey 2.0 Composite** | Linear-light composite over a checkerboard, a colour or a background clip, with light wrap; also outputs straight or premultiplied RGBA. Works in sRGB or, with `colorspace: linear`, on the Advanced keyer's unclamped linear foreground. |
 | **CorridorKey 2.0 Depth & Normals** | MoGe-2 depth and normal maps with a locked camera for steady clips; `geometry` is ComfyUI's `MOGE_GEOMETRY`. |
 | **CorridorKey 2.0 Semantic Identity** | C-RADIOv4 features as a colour video; with a reference mask, a per-frame subject mask. |
 | **CorridorKey 2.0 Motion Tracking** | RVM identity features, motion energy, and a reference mask tracked forwards and backwards. |
@@ -149,6 +160,7 @@ All nodes are in the **CorridorKey 2.0** category. Hover any input for a tooltip
 | **CorridorKey 2.0 Fine-Tune (Basic)** | Trains a LoRA from your clip and target mattes with fixed, safe settings. |
 | **CorridorKey 2.0 Fine-Tune (Advanced)** | Every training setting, loss weight and hint-curriculum share. |
 | **CorridorKey 2.0 Demo Clip** | Synthetic green/blue-screen clip with its true alpha and foreground; the same seed gives the same clip on any device. |
+| **CorridorKey 2.0 Load Image Sequence** | A folder of frames in filename order with `start_frame` and `frame_count`: EXR (scene-linear, HDR kept), 16-bit PNG/TIFF, JPEG. Outputs `images`, `frame_count` and the `colorspace` they are in. |
 
 ### Basic or Advanced keyer?
 
@@ -235,12 +247,14 @@ higher. Alpha error is the mean absolute difference from the Demo Clip's true ma
 better mattes than 8/4. ¹ On the test machine the Windows commit limit kept `auto` at 24/12 for 1080p (see below);
 `auto` picks from the memory that is free when the node runs, so it can differ on yours.
 
-**What `auto` picks by GPU size** (adapted from the CorridorKey 2.0 documentation; window as chunk/stride). This
-pack never goes below a 2/1 window, because a 1/1 window cannot carry a hint forward:
+**What `auto` picks by GPU size** (from the CorridorKey 2.0 documentation; window as chunk/stride). The choice is
+the same as CorridorKey's own runtime makes, which a test checks. A 1/1 window keys every frame on its own, so a
+first-frame hint does not carry through the clip; the keyer says so in the console when it has to use one, and
+warns when even that is estimated not to fit:
 
 | GPU memory | 720p | 1080p | 1440p | 4K |
 |---|---|---|---|---|
-| 4 GB | 4/2 low-VRAM | 2/1 low-VRAM | 2/1 low-VRAM | use `process_scale` |
+| 4 GB | 4/2 low-VRAM | 2/1 low-VRAM | 1/1 low-VRAM | not enough memory: lower `process_scale` |
 | 6 GB | 24/12 low-VRAM | 8/4 low-VRAM | 4/2 low-VRAM | 2/1 low-VRAM |
 | 8 GB | 24/12 low-VRAM | 8/4 low-VRAM | 8/4 low-VRAM | 4/2 low-VRAM |
 | 12 GB | 80/40 low-VRAM | 24/12 low-VRAM | 8/4 | 8/4 low-VRAM |
@@ -269,15 +283,26 @@ length. At 1080p each 3-channel IMAGE costs about 25 MB per frame and each MASK 
 
 The model weights add about 4.6 GB of RAM while a workflow that uses them is loaded. The Basic keyer despills
 and builds its RGBA output in place, so the figures above are close to the peak. The keyers warn in the console
-when a clip will not fit comfortably. For long shots, key in batches (for example with the frame cap and skip settings of a video
-loader) and give each batch a first-frame hint, such as the last alpha frame of the previous batch.
+when a clip will not fit comfortably.
+
+**Long shots** are keyed in batches: the frame cap and skip settings of a video loader, or `start_frame` and
+`frame_count` on **Load Image Sequence**. This is the one place where the pack cannot match CorridorKey's own
+runtime, which streams a clip of any length from disk to disk: every batch starts the model's temporal context
+(the RVM memory and the overlapping windows) fresh, so a seam can show where batches meet. To hide it, overlap
+the batches by about 8 frames, give each batch a first-frame hint taken from the previous batch's alpha on the
+overlapping frame (Hint Prep's `frame` and `frame_index` pick it), and drop the overlapping frames from one of the two batches.
 
 ## Colour, HDR and despill
 
-- Input is display-referred sRGB by default (normal video and PNG/JPG frames). For scene-linear plates (EXR),
-  set `input_colorspace: linear` on the Advanced keyer; values above 1.0 are kept.
-- `output_colorspace: linear` returns an unclamped scene-linear foreground for an EXR pipeline. Pair it with an
-  EXR saver node; ComfyUI's Save Image writes 8-bit PNG.
+- Input is display-referred sRGB by default (normal video and PNG/JPG frames). For scene-linear plates, load
+  the EXRs with **Load Image Sequence** (`exr_output: linear`; ComfyUI's Load Image cannot read EXR) and set
+  `input_colorspace: linear` on the Advanced keyer; values above 1.0 are kept.
+- `output_colorspace: linear` returns an unclamped scene-linear foreground. For a full linear chain, set
+  Composite's `colorspace` to `linear` too, and save with **Save Image (Advanced)**: `format: exr`,
+  `input_color_space: linear`, `bit_depth: 16-bit float` (CorridorKey's default) or `32-bit float`.
+- Saving: the plain Save Image node writes 8-bit PNG. **Save Image (Advanced)** (in ComfyUI core) writes 16-bit
+  PNG, or EXR; with `input_color_space: sRGB` it converts sRGB images to linear EXR and keeps the alpha of RGBA
+  images as it is. The example workflows use it.
 - `linear_brightness`, `linear_contrast` and `contrast_pivot` are CorridorKey's experimental linear-light
   adjustments: applied before the model and inverted on the foreground.
 - The foreground is **straight** (not premultiplied). Composite's `premultiply` option multiplies colour by alpha
@@ -353,7 +378,7 @@ If you know CorridorKey 2.0's `infer.py`, these are the equivalents:
 
 | `infer.py` | In ComfyUI |
 |---|---|
-| `--input` | a video or image-sequence loader → `images` |
+| `--input` (a video file) | Load Video → Get Video Components → `images` |
 | `--hint_first_frame matte.png` | one mask into `alpha_hint` |
 | `--hint_video hint.mp4` | one mask per frame into `alpha_hint` |
 | `--hint_quality` | `hint_quality` |
@@ -361,17 +386,20 @@ If you know CorridorKey 2.0's `infer.py`, these are the equivalents:
 | `--hann_chunk`, `--hann_stride` | `temporal_window: custom` with `hann_chunk`, `hann_stride` (Advanced) |
 | `--low_vram` | `low_vram: on` (Advanced) |
 | `--model_scale` | `process_scale` (Advanced; output is scaled back to the input size) |
-| `--frame_dir_linear` | `input_colorspace: linear` (Advanced) |
+| `--input` (a folder of frames) | **Load Image Sequence** |
+| `--frame_dir_linear` | `input_colorspace: linear` (Advanced), with EXRs from Load Image Sequence |
 | `--cutout_linear` | `output_colorspace: linear` (Advanced) |
 | `--despill_strength` | Basic's `despill`, or the Despill node |
 | `--linear_brightness`, `--linear_contrast`, `--linear_contrast_pivot` | same names (Advanced) |
 | `--stage2_batch` | `stage2_batch` (Advanced) |
 | `--outputs alpha fg checker cutout` | `alpha`; `fg` = the Advanced keyer's `foreground` (Basic's is despilled like `cutout`; set its `despill` to 0 for the raw colour); Composite (checker); Basic's `rgba` (cutout) |
-| `--num_frames`, `--start_mode` | the frame cap and skip settings of your loader |
-| `--output_format exr` | `output_colorspace: linear` and an EXR saver node |
+| `--num_frames`, `--start_mode` | the frame cap and skip settings of your loader, or `start_frame`/`frame_count` of Load Image Sequence |
+| `--output_format exr`, `--exr_dtype` | Save Image (Advanced) with `format: exr` and its `bit_depth`; `output_colorspace: linear` keeps HDR values |
+| `--output_format video` (10-bit H.264, ProRes 4444) | Save Image (Advanced) 16-bit PNG, or a video save node |
 
 New in this pack: keyframe hints on any frame with backward propagation, the stage-1 `coarse_alpha` and
-`decision_matte` outputs, and processing at a reduced scale with full-size output.
+`decision_matte` outputs, processing at a reduced scale with full-size output (`--model_scale` other than 1.0
+stops with an error in CorridorKey's runtime), LoRA fine-tuning, and keying on Apple Silicon.
 
 ## Troubleshooting
 
@@ -389,13 +417,37 @@ New in this pack: keyframe hints on any frame with backward propagation, the sta
 - **The first run is slow.** It downloads about 5 GB and loads the model (around 10 s); later runs reuse the
   loaded model.
 - **The Fine-Tune nodes say they need CUDA.** Training runs on NVIDIA GPUs only.
+- **Mac: an error says an operation is not implemented for MPS.** Start ComfyUI with
+  `PYTORCH_ENABLE_MPS_FALLBACK=1 python main.py` so PyTorch runs that one operation on the CPU.
+
+## Apple Silicon (experimental)
+
+CorridorKey's own runtime needs an NVIDIA GPU. In this pack the keyers also run on Apple Silicon Macs (M1 and
+newer) through PyTorch's Metal (MPS) backend, as do Depth & Normals, Semantic Identity and Motion Tracking (which
+never required CUDA). Fine-tuning still needs an NVIDIA GPU.
+
+- It is **experimental**: it has not been measured against the NVIDIA results on real footage yet. Expect it to be
+  much slower than an RTX GPU. Compare a few frames with an NVIDIA machine before relying on it for a delivery.
+- The GPU shares the Mac's memory, so the automatic temporal window is chosen from free RAM (capped by Metal's
+  recommended working-set size), after the RAM the clip's outputs will take. Close other large apps for longer
+  windows; `vram_budget_gb` on the Advanced keyer overrides the budget.
+- Where this PyTorch/macOS combination has no bfloat16 autocast on MPS, the network runs in float32 instead (the
+  console says so): results then differ very slightly from the NVIDIA ones and use more memory.
+- Use a recent PyTorch build. bfloat16 on the Mac GPU needs macOS 14 or newer.
 
 ## Development
 
-Tests use ComfyUI's Python environment. Matte, hint, colour, analysis, geometry and loss tests run on the CPU.
-Pipeline tests use stand-in networks but need a CUDA GPU. Tests that load the real model also need the downloaded
-model files (`COMFYUI_PATH`, or `CORRIDORKEY2_MODELS` pointing at a `models/corridorkey2` folder). Tests whose
+Tests use ComfyUI's Python environment. Everything except the real model runs on the CPU, so the suite runs on
+any machine, including a Mac (without an NVIDIA GPU, ComfyUI's helpers are put in CPU mode for the tests; set
+`CK2_TEST_COMFY_DEVICE=native` to keep its own device choice). Pipeline tests use small stand-in networks; with a
+CUDA GPU they run on both the GPU and the CPU. Tests that load the real model also need the downloaded model files
+(`COMFYUI_PATH`, or `CORRIDORKEY2_MODELS` pointing at a `models/corridorkey2` folder) and a CUDA GPU. Tests whose
 requirements are missing are skipped.
+
+`tests/test_upstream_parity.py` is the guarantee that the pack keys exactly like CorridorKey 2.0: it runs the
+vendored, unmodified `corridorkey/runtime.py:run_inference` and the pack's pipeline on the same frames with the
+same stand-in network, for no hint, first-frame hints, hint videos with and without carry, low-VRAM mode and
+several window sizes, and requires bit-identical alpha and foreground.
 
 ```bash
 cd ComfyUI/custom_nodes/ComfyUI-CorridorKey2.0
@@ -431,7 +483,11 @@ in [LICENSE](LICENSE). In short, from the CorridorKey 2.0 documentation:
 - What you build on it and release must be freely accessible, stay under the same licence and keep the
   CorridorKey name. This includes LoRAs trained with this pack.
 - Organisations with more than US $20 million in annual revenue need a seat of the CorridorKey plugin for each
-  person using it ([corridorkey.com](https://corridorkey.com)).
+  person using it ([corridorkey.com](https://corridorkey.com)). That applies to using it through this pack too.
+- Building CorridorKey into a commercial software package or inference service needs a separate written agreement
+  with Corridor Digital (contact@corridordigital.com). So this pack must not be offered behind a paywall,
+  subscription or usage billing, including as part of a paid hosted ComfyUI service, without that agreement.
 
-The ComfyUI integration code is © 2026 Marwan Mostafa. The foundation models keep their own licences (see
+This summary is not legal advice; the [LICENSE](LICENSE) text is what applies. The ComfyUI integration code is
+© 2026 Marwan Mostafa. The foundation models keep their own licences (see
 [Credits](#credits)). The material is provided as-is, without warranties of any kind.

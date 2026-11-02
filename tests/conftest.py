@@ -18,6 +18,17 @@ _comfy = os.environ.get("COMFYUI_PATH")
 if _comfy and _comfy not in sys.path:
     sys.path.insert(0, _comfy)
 
+# Without an NVIDIA GPU (a Mac, a CI machine) ComfyUI's helpers run on the CPU, so every test that
+# needs no GPU runs there; tests that need CUDA skip themselves. CK2_TEST_COMFY_DEVICE=native keeps
+# ComfyUI's own device choice (for example Apple's MPS).
+if _comfy and os.environ.get("CK2_TEST_COMFY_DEVICE", "auto") == "auto":
+    import torch as _torch
+
+    if not _torch.cuda.is_available():
+        from comfy.cli_args import args as _comfy_args
+
+        _comfy_args.cpu = True
+
 if "ck2pack" not in sys.modules:
     _pkg = types.ModuleType("ck2pack")
     _pkg.__path__ = [str(PACK_ROOT)]

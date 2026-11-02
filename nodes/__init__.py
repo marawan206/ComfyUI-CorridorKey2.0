@@ -16,6 +16,7 @@ _MODULES = (
     "lora_nodes",
     "train_nodes",
     "demo_nodes",
+    "sequence_nodes",
 )
 
 

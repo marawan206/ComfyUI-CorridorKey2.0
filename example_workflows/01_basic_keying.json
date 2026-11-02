@@ -318,14 +318,14 @@
     },
     {
       "id": 4,
-      "type": "SaveImage",
+      "type": "SaveImageAdvanced",
       "pos": [
         756.780859375,
         120
       ],
       "size": [
         270,
-        58
+        130
       ],
       "flags": {},
       "order": 5,
@@ -345,6 +345,33 @@
             "name": "filename_prefix"
           },
           "link": null
+        },
+        {
+          "localized_name": "format",
+          "name": "format",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "widget": {
+            "name": "format"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "bit_depth",
+          "name": "format.bit_depth",
+          "type": "COMBO",
+          "widget": {
+            "name": "format.bit_depth"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "input_color_space",
+          "name": "format.input_color_space",
+          "type": "COMBO",
+          "widget": {
+            "name": "format.input_color_space"
+          },
+          "link": null
         }
       ],
       "outputs": [
@@ -357,10 +384,16 @@
       ],
       "properties": {},
       "widgets_values": [
-        "corridorkey2/rgba"
+        "corridorkey2/rgba",
+        "png",
+        "16-bit",
+        "sRGB"
       ],
       "widgets_values_named": {
-        "filename_prefix": "corridorkey2/rgba"
+        "filename_prefix": "corridorkey2/rgba",
+        "format": "png",
+        "format.bit_depth": "16-bit",
+        "format.input_color_space": "sRGB"
       }
     },
     {
@@ -416,7 +449,7 @@
       "title": "About this workflow",
       "properties": {},
       "widgets_values": [
-        "## CorridorKey 2.0: basic keying\n\nKeys a green/blue-screen clip with no settings to tune. The first run downloads the model (about 5 GB) into `models/corridorkey2`.\n\n**Your footage:** replace **Demo Clip** with **Load Video → Get Video Components** (or an image sequence loader) and connect its `images`. The Demo Clip is a synthetic green-screen shot with its exact matte, so every example runs without media.\n\n- **alpha_hint** (optional): a rough subject mask. One mask = hint on the first frame, one per frame = per-frame hint. White = subject.\n- **hint_quality**: how much to trust the hint (clean matte, rough matte, loose hint).\n- **despill**: removes screen colour from the foreground. Changing it re-runs the keyer; use the Despill node instead to tweak without re-keying.\n\nOutputs: straight sRGB foreground, alpha, and RGBA saved as a PNG sequence in `output/corridorkey2`."
+        "## CorridorKey 2.0: basic keying\n\nKeys a green/blue-screen clip with no settings to tune. The first run downloads the model (about 5 GB) into `models/corridorkey2`.\n\n**Your footage:** replace **Demo Clip** with **Load Video → Get Video Components**, or with **CorridorKey 2.0 Load Image Sequence** for a folder of frames (EXR, 16-bit PNG/TIFF, JPEG), and connect its `images`. The Demo Clip is a synthetic green-screen shot with its exact matte, so every example runs without media.\n\n- **alpha_hint** (optional): a rough subject mask. One mask = hint on the first frame, one per frame = per-frame hint. White = subject.\n- **hint_quality**: how much to trust the hint (clean matte, rough matte, loose hint).\n- **despill**: removes screen colour from the foreground. Changing it re-runs the keyer; use the Despill node instead to tweak without re-keying.\n\nOutputs: straight sRGB foreground, alpha, and RGBA saved as a 16-bit PNG sequence in `output/corridorkey2` (Save Image (Advanced): switch its format to EXR for VFX pipelines)."
       ],
       "widgets_values_named": {
         "text": "## CorridorKey 2.0: basic keying\n\nKeys a green/blue-screen clip with no settings to tune. The first run downloads the model (about 5 GB) into `models/corridorkey2`.\n\n**Your footage:** replace **Demo Clip** with **Load Video → Get Video Components** (or an image sequence loader) and connect its `images`. The Demo Clip is a synthetic green-screen shot with its exact matte, so every example runs without media.\n\n- **alpha_hint** (optional): a rough subject mask. One mask = hint on the first frame, one per frame = per-frame hint. White = subject.\n- **hint_quality**: how much to trust the hint (clean matte, rough matte, loose hint).\n- **despill**: removes screen colour from the foreground. Changing it re-runs the keyer; use the Despill node instead to tweak without re-keying.\n\nOutputs: straight sRGB foreground, alpha, and RGBA saved as a PNG sequence in `output/corridorkey2`."

@@ -111,6 +111,14 @@ class FakeHandle:
         yield self.base
 
 
+@pytest.fixture(params=["cuda", "cpu"])
+def keyer_device(request):
+    """The pipeline runs on any device: CUDA when present, and always the CPU."""
+    if request.param == "cuda" and not torch.cuda.is_available():
+        pytest.skip("CUDA GPU not available")
+    return torch.device(request.param)
+
+
 def gray_clip(T, h=64, w=96):
     vals = (torch.arange(T, dtype=torch.float32) + 1) / (T + 2)
     return vals.view(T, 1, 1, 1).expand(T, h, w, 3).contiguous()
@@ -150,9 +158,24 @@ def test_geometry_padding():
     assert g.shape_hw == (128, 128) and sum(g.pad[:2]) == 75
 
 
-def test_select_profile_floor_and_validation():
-    c, s, lv, _ = select_profile((1152, 1920), 100, budget_gb=1.0, chunk=None, stride=None, low_vram=None)
-    assert (c, s) == (2, 1) and lv is True
+def test_select_profile_matches_upstream_and_validation():
+    from ck2pack.corridorkey.runtime import select_vram_profile
+    from ck2pack.ck_comfy.pipeline import profile_fits
+
+    # Same choice as CorridorKey's own runtime for every size and budget, including 1/1 on small GPUs.
+    for hw in ((768, 1280), (1152, 1920), (1536, 2560), (2176, 3840)):
+        for budget in (1.0, 3.0, 3.4, 3.6, 4.0, 5.0, 6.0, 8.0, 12.0, 16.0, 24.0, 48.0, 96.0):
+            for frames in (1, 3, 200):
+                up = select_vram_profile(hw, frames, budget)
+                ours = select_profile(hw, frames, budget, chunk=None, stride=None, low_vram=None)
+                assert ours[:3] == up[:3], (hw, budget, frames)
+    # 2/1 is preferred while it fits; below that, 1/1 (instead of a 2/1 that would not fit).
+    c, s, lv, est = select_profile((1152, 1920), 100, budget_gb=3.6, chunk=None, stride=None, low_vram=None)
+    assert (c, s, lv) == (2, 1, True) and profile_fits(est, 3.6)
+    c, s, lv, est = select_profile((1152, 1920), 100, budget_gb=3.4, chunk=None, stride=None, low_vram=None)
+    assert (c, s, lv) == (1, 1, True) and profile_fits(est, 3.4)
+    c, s, lv, est = select_profile((1152, 1920), 100, budget_gb=1.0, chunk=None, stride=None, low_vram=None)
+    assert (c, s, lv) == (1, 1, True) and not profile_fits(est, 1.0)
     c, s, lv, _ = select_profile((768, 1280), 100, budget_gb=40.0, chunk=None, stride=None, low_vram=None)
     assert c == 80 and s == 40 and lv is False
     with pytest.raises(ValueError):
@@ -169,14 +192,16 @@ def test_plan_segments():
 
 
 @pytest.mark.parametrize("chunk,stride,T", [(8, 4, 24), (8, 4, 23), (5, 2, 17), (4, 4, 9), (1, 1, 5)])
-def test_every_frame_written_once_and_aligned(cuda, tmp_path, chunk, stride, T):
+def test_every_frame_written_once_and_aligned(keyer_device, tmp_path, chunk, stride, T):
+    cuda = keyer_device
     images = torch.rand(T, 37, 53, 3)
     r = run(FakeHandle(), images, Hints(), cuda, tmp_path, chunk=chunk, stride=stride, low_vram=False)
     assert r.alpha.shape == (T, 37, 53)
     assert_matches_frames(r.alpha, images)
 
 
-def test_low_vram_matches_normal(cuda, tmp_path):
+def test_low_vram_matches_normal(keyer_device, tmp_path):
+    cuda = keyer_device
     images = torch.rand(13, 50, 70, 3)
     a = run(FakeHandle(), images, Hints(keyframes={0: torch.ones(50, 70)}), cuda, tmp_path,
             chunk=6, stride=3, low_vram=False, want_coarse=True, want_decision=True)
@@ -187,7 +212,8 @@ def test_low_vram_matches_normal(cuda, tmp_path):
     assert not list(tmp_path.iterdir()), "low-VRAM spill files were not removed"
 
 
-def test_hint_quality_semantics_first_frame(cuda, tmp_path):
+def test_hint_quality_semantics_first_frame(keyer_device, tmp_path):
+    cuda = keyer_device
     T = 12
     handle = FakeHandle()
     run(handle, gray_clip(T), Hints(keyframes={0: torch.ones(64, 96)}), cuda, tmp_path,
@@ -199,7 +225,8 @@ def test_hint_quality_semantics_first_frame(cuda, tmp_path):
         assert later[:2] == [bf(0.95)] * 2 and later[2:] == [0.0, 0.0]   # carried overlap frames
 
 
-def test_no_hint_windows_get_minus_one(cuda, tmp_path):
+def test_no_hint_windows_get_minus_one(keyer_device, tmp_path):
+    cuda = keyer_device
     handle = FakeHandle()
     run(handle, gray_clip(10), Hints(keyframes={0: torch.ones(64, 96)}), cuda, tmp_path,
         chunk=4, stride=2, carry_hint=False)
@@ -208,7 +235,8 @@ def test_no_hint_windows_get_minus_one(cuda, tmp_path):
     assert all(window == [-1.0] * 4 for window in q[1:])
 
 
-def test_per_frame_hints_and_carry_precedence(cuda, tmp_path):
+def test_per_frame_hints_and_carry_precedence(keyer_device, tmp_path):
+    cuda = keyer_device
     T = 10
     handle = FakeHandle()
     video = torch.full((T, 64, 96), 0.5)
@@ -220,7 +248,8 @@ def test_per_frame_hints_and_carry_precedence(cuda, tmp_path):
     assert all(w[:2] == [bf(0.95)] * 2 and w[2:] == [bf(0.75)] * 2 for w in q[1:])
 
 
-def test_keyframe_backward_propagation_order(cuda, tmp_path):
+def test_keyframe_backward_propagation_order(keyer_device, tmp_path):
+    cuda = keyer_device
     T, k0 = 10, 4
     handle = FakeHandle()
     images = gray_clip(T)
@@ -235,7 +264,8 @@ def test_keyframe_backward_propagation_order(cuda, tmp_path):
     assert_matches_frames(r.alpha, images)
 
 
-def test_keyframe_without_backward_is_unhinted_prefix(cuda, tmp_path):
+def test_keyframe_without_backward_is_unhinted_prefix(keyer_device, tmp_path):
+    cuda = keyer_device
     T, k0 = 9, 5
     handle = FakeHandle()
     run(handle, gray_clip(T), Hints(keyframes={k0: torch.ones(64, 96)}), cuda, tmp_path,
@@ -245,7 +275,8 @@ def test_keyframe_without_backward_is_unhinted_prefix(cuda, tmp_path):
     assert prefix_windows, "frames before the first keyframe should be keyed without a hint"
 
 
-def test_process_scale_returns_native_size(cuda, tmp_path):
+def test_process_scale_returns_native_size(keyer_device, tmp_path):
+    cuda = keyer_device
     images = torch.rand(5, 90, 160, 3)
     r = run(FakeHandle(), images, Hints(), cuda, tmp_path, chunk=4, stride=2, process_scale=0.5)
     assert r.alpha.shape == (5, 90, 160) and r.fg.shape == (5, 90, 160, 3)
@@ -270,7 +301,7 @@ def test_windows_commit_limit_caps_the_vram_budget(monkeypatch):
     GB = 2**30
     handle = SimpleNamespace(base=SimpleNamespace(resident_bytes=lambda device: 2 * GB), vram_reserve_gb=0.5)
     monkeypatch.setattr(utils, "torch_device", lambda: torch.device("cuda"))
-    monkeypatch.setattr(utils.torch.cuda, "get_device_properties", lambda d: SimpleNamespace(total_memory=24 * GB))
+    monkeypatch.setattr(utils.mm, "get_total_memory", lambda *a, **k: 24 * GB)
     monkeypatch.setattr(utils.mm, "free_memory", lambda *a, **k: None)
     monkeypatch.setattr(utils.mm, "soft_empty_cache", lambda *a, **k: None)
     monkeypatch.setattr(utils.mm, "get_free_memory", lambda *a, **k: 18 * GB)
@@ -296,7 +327,31 @@ def test_windows_commit_limit_caps_the_vram_budget(monkeypatch):
     assert utils.memory_budget(handle, 20.0) == (20.0, None)
 
 
-def test_hard_limit_refuses_a_forced_window_before_it_starts(cuda, tmp_path):
+def test_apple_silicon_budget_uses_unified_memory(monkeypatch):
+    from ck2pack.ck_comfy import comfy_utils as utils
+
+    GB = 2**30
+    handle = SimpleNamespace(base=SimpleNamespace(resident_bytes=lambda device: 4 * GB), vram_reserve_gb=0.5)
+    monkeypatch.setattr(utils, "torch_device", lambda: torch.device("mps"))
+    monkeypatch.setattr(utils.mm, "get_total_memory", lambda *a, **k: 48 * GB)
+    monkeypatch.setattr(utils.mm, "free_memory", lambda *a, **k: None)
+    monkeypatch.setattr(utils.mm, "soft_empty_cache", lambda *a, **k: None)
+    monkeypatch.setattr(utils.mm, "get_free_memory", lambda *a, **k: 30 * GB)
+    monkeypatch.setattr(utils, "commit_free_bytes", lambda: 1 * GB)   # ignored on a Mac
+    # Free RAM + resident weights - the run's outputs, capped by Metal's recommended working set.
+    monkeypatch.setattr(utils.torch.mps, "recommended_max_memory", lambda: 36 * GB, raising=False)
+    assert utils.memory_budget(handle, host_bytes=6 * GB) == (pytest.approx(27.5), None)
+    monkeypatch.setattr(utils.torch.mps, "recommended_max_memory", lambda: 20 * GB, raising=False)
+    assert utils.memory_budget(handle, host_bytes=6 * GB) == (pytest.approx(19.5), None)
+    assert utils.memory_budget(handle, 7.0) == (7.0, None)
+    assert utils.keying_device() == torch.device("mps")
+    monkeypatch.setattr(utils, "torch_device", lambda: torch.device("cpu"))
+    with pytest.raises(RuntimeError, match="Apple Silicon"):
+        utils.keying_device()
+
+
+def test_hard_limit_refuses_a_forced_window_before_it_starts(keyer_device, tmp_path):
+    cuda = keyer_device
     images = torch.rand(9, 37, 53, 3)
     settings = KeySettings(chunk=8, stride=4, low_vram=False)
     kwargs = dict(device=cuda, budget_gb=20.0, temp_dir=str(tmp_path), cb=pipeline.Callbacks(log=lambda m: None))
@@ -305,3 +360,30 @@ def test_hard_limit_refuses_a_forced_window_before_it_starts(cuda, tmp_path):
             pipeline.run(FakeHandle(), images, Hints(), settings, hard_limit_gb=2.0, **kwargs)
         r = pipeline.run(FakeHandle(), images, Hints(), settings, hard_limit_gb=40.0, **kwargs)
     assert_matches_frames(r.alpha, images)
+
+
+def test_apple_silicon_retries_in_float32_when_bf16_fails(monkeypatch):
+    from ck2pack.ck_comfy import keying
+
+    calls = []
+
+    def fake_run(handle, images, hints, settings, **kw):
+        calls.append(settings.force_float32)
+        if not settings.force_float32:
+            raise RuntimeError('"upsample_trilinear3d" not implemented for \'BFloat16\'')
+        return "ok"
+
+    monkeypatch.setattr(keying, "run", fake_run)
+    monkeypatch.setattr(keying, "memory_budget", lambda *a, **k: (10.0, None))
+    monkeypatch.setattr(keying, "temp_dir", lambda: "/tmp")
+    monkeypatch.setattr(keying, "Progress", lambda: SimpleNamespace(set_total=lambda n: None, tick=lambda n=1: None))
+    images = torch.rand(2, 16, 16, 3)
+    monkeypatch.setattr(keying, "keying_device", lambda: torch.device("mps"))
+    assert keying.key_clip(None, images, Hints(), KeySettings()) == "ok"
+    assert calls == [False, True]
+    # On NVIDIA GPUs nothing is retried: the error is reported as it is.
+    calls.clear()
+    monkeypatch.setattr(keying, "keying_device", lambda: torch.device("cuda"))
+    with pytest.raises(RuntimeError, match="BFloat16"):
+        keying.key_clip(None, images, Hints(), KeySettings())
+    assert calls == [False]

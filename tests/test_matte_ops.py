@@ -213,6 +213,21 @@ def test_chunked_and_in_place_results_match(monkeypatch, op):
     torch.testing.assert_close(chunked, whole)
 
 
+def test_linear_composite_keeps_hdr_and_matches_srgb_mode():
+    gen = torch.Generator().manual_seed(2)
+    fg, bg = torch.rand(3, 24, 32, 3, generator=gen), torch.rand(3, 24, 32, 3, generator=gen)
+    a = torch.rand(3, 24, 32, generator=gen)
+    fg_lin, bg_lin = color.srgb_to_linear(fg), color.srgb_to_linear(bg)
+    # In range, the linear mode is the sRGB mode without the encode/decode around it.
+    torch.testing.assert_close(mo.composite(fg_lin, a, bg_lin, linear=True, device=CPU),
+                               color.srgb_to_linear(mo.composite(fg, a, bg, device=CPU)), atol=1e-5, rtol=0)
+    # Values above 1.0 survive (an sRGB composite would clip them).
+    hot = fg_lin * 4.0
+    out = mo.composite(hot, torch.ones_like(a), bg_lin, linear=True, device=CPU)
+    torch.testing.assert_close(out, hot)
+    assert float(out.max()) > 1.5
+
+
 def test_composite_matches_linear_light_blend():
     gen = torch.Generator().manual_seed(1)
     fg, bg = torch.rand(3, 24, 32, 3, generator=gen), torch.rand(3, 24, 32, 3, generator=gen)

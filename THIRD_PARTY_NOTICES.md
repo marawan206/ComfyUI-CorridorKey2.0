@@ -27,8 +27,13 @@ released under the same Corridor Key Licence.
   (`run_inference`, `hann_stage1_stream` and the foundation pre-passes): frames
   are read from and written to in-memory tensors, hints can be placed on any
   frame with forward/backward propagation, stage-1 auxiliary mattes are
-  returned, outputs can be rescaled after processing, and memory decisions use
-  ComfyUI's model management.
+  returned, outputs can be rescaled after processing, memory decisions use
+  ComfyUI's model management, and the network can also run on Apple Silicon
+  (MPS), in float32 where bfloat16 autocast is unavailable. On CUDA the
+  computation is unchanged: `tests/test_upstream_parity.py` checks that it is
+  bit-identical to `run_inference`.
+- `ck_comfy/sequence.py` reads frame folders in the same sorted order as
+  `corridorkey/video_io.py` does for `--input` folders.
 - `ck_comfy/loader.py` replaces `corridorkey/runtime.py:load_model`: no
   process-wide offline flags, CPU construction, per-phase device placement.
 - `ck_comfy/download.py` is adapted from `scripts/download_weights.py`: ComfyUI

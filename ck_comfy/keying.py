@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 import torch
 
 from . import hints as hint_ops
 from . import matte_ops
-from .comfy_utils import Progress, check_interrupt, info, memory_budget, temp_dir, torch_device, warn_if_low_ram
+from .comfy_utils import (Progress, check_interrupt, info, keying_device, memory_budget, temp_dir,
+                          warn_if_low_ram)
 from .pipeline import Callbacks, Geometry, Hints, KeyResult, KeySettings, run
 from ..corridorkey.runtime import estimate_peak_vram_gb
 
@@ -70,6 +73,7 @@ def host_bytes_needed(num_frames: int, h: int, w: int, geom: Geometry, settings:
 
 def key_clip(model_handle, images: torch.Tensor, hints: Hints, settings: KeySettings,
              *, vram_override_gb: float = 0.0, extra_channels: int = 0) -> KeyResult:
+    device = keying_device()
     T, h, w = int(images.shape[0]), int(images.shape[1]), int(images.shape[2])
     warn_if_low_ram(T, h, w, 4 + extra_channels)
     geom = Geometry.for_frames(h, w, settings.process_scale)
@@ -79,8 +83,24 @@ def key_clip(model_handle, images: torch.Tensor, hints: Hints, settings: KeySett
     progress = Progress()
     callbacks = Callbacks(total=progress.set_total, tick=progress.tick, check=check_interrupt, log=info)
     with torch.inference_mode():
-        return run(model_handle, images, hints, settings, device=torch_device(), budget_gb=budget,
-                   temp_dir=temp_dir(), cb=callbacks, hard_limit_gb=limit)
+        try:
+            return run(model_handle, images, hints, settings, device=device, budget_gb=budget,
+                       temp_dir=temp_dir(), cb=callbacks, hard_limit_gb=limit)
+        except RuntimeError as exc:
+            if not _retry_in_float32(device, settings, exc):
+                raise
+            info(f"[CorridorKey 2.0] bfloat16 failed on Apple Silicon ({str(exc).splitlines()[0][:200]}); "
+                 "keying again in float32.")
+            return run(model_handle, images, hints, dataclasses.replace(settings, force_float32=True),
+                       device=device, budget_gb=budget, temp_dir=temp_dir(), cb=callbacks, hard_limit_gb=limit)
+
+
+def _retry_in_float32(device: torch.device, settings: KeySettings, exc: Exception) -> bool:
+    """Apple Silicon only: a dtype problem in bf16 (an op without bfloat16 support on Metal) is retried in float32."""
+    if device.type != "mps" or settings.force_float32:
+        return False
+    text = str(exc).lower()
+    return "bfloat16" in text or "bf16" in text or "dtype" in text
 
 
 def describe(result: KeyResult) -> str:
